@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv()
 google_api_key = "AIzaSyDU7L29UsHIHGhoIICcHYtTvDIQZ4pl5lU"
 google_genai_model = "gemini-pro"
-pdf_folder_path = r"D:\Chatbot\Pdfs"
+pdf_folder_path = r"Pdfs"
 
 def get_pdf_text(pdf_docs):
     text = ""
@@ -102,13 +102,13 @@ def main():
         st.write(' ')
 
     with col2:
-        st.image(r"D:\Chatbot\Intro.png",width=300)
+        st.image(r"Intro.png",width=300)
 
     with col3:
         st.write(' ')
 
     # Main content area for displaying chat messages
-    #st.image(r"D:\Chatbot\Intro.png",width=300)
+    #st.image(r"Intro.png",width=300)
     st.markdown('<div style="background-color:#FFA500;padding:10px;border-radius:10px;">'
             '<h2 style="color:#214761;text-align:center;font-size:20px;">Hi there! I am MSC Genie. I am a GenAI Bot that will be answering your queries. Currently, the following repositories are covered.</h2>'
             '</div>', unsafe_allow_html=True)
@@ -163,7 +163,7 @@ def main():
                 st.write(' ')
 
             with col8:
-                st.image(r"D:\Chatbot\Found.png", width=75)
+                st.image(r"Found.png", width=75)
             #st.image("D:\Chatbot\Found.png", width=50)
             st.markdown(
             f'<div class="message-container" style="display: flex; justify-content: flex-end;">'
