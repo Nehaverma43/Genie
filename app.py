@@ -36,14 +36,15 @@ def get_vector_store(chunks):
     vector_store.save_local("faiss_index")
 
 def get_conversational_chain(google_api_key=google_api_key):
-    prompt_template = """
-    Answer the question as detailed as possible from the provided context, make sure to provide all the details, if the answer is not in
-    provided context just say, "answer is not available in the context", don't provide the wrong answer\n\n
-    Context:\n {context}?\n
-    Question: \n{question}\n
-
-    Answer:
+    map_prompt = PromptTemplate.from_template(
     """
+    Write a concise summary of the following:
+
+    "{text}"
+
+    CONCISE SUMMARY:
+    """
+    )
 
     model = ChatGoogleGenerativeAI(model=google_genai_model,
                                    client=genai,
@@ -51,7 +52,15 @@ def get_conversational_chain(google_api_key=google_api_key):
                                    google_api_key=google_api_key,)
     prompt = PromptTemplate(template=prompt_template,
                             input_variables=["context", "question"])
-    chain = load_qa_chain(llm=model, chain_type="stuff", prompt=prompt)
+    chain = load_summarize_chain(
+    llm=model, 
+    chain_type="map_reduce", 
+    map_prompt = map_prompt, 
+    
+    # these variables are the default values and can be modified/omitted
+    combine_document_variable_name="text",
+    map_reduce_document_variable_name="text",
+)
     return chain
 
 def HR_Policies():
@@ -74,7 +83,7 @@ def user_input(user_question):
     chain = get_conversational_chain()
 
     response = chain(
-        {"input_documents": docs, "question": user_question}, return_only_outputs=True, )
+        {"input_documents": docs, "question": user_question}, return_only_outputs=True,request_options={"timeout": 1000},  )
 
     return response
 def clear_text():
@@ -119,7 +128,7 @@ def main():
     col1, col2, col3 = st.columns(3)  
 
     with col1:
-        if st.button('MSC Publications', on_click=MSC_publications, key="MSC_Publications"):
+        if st.button('MSC Publications', on_click=MSC_publications, key="MSC_Publications",disabled=True):
             MSC_publications()
 
     with col2:
@@ -127,7 +136,7 @@ def main():
             HR_Policies()
             
     with col3:
-        if st.button("KMM Templates", on_click=KMM_templates, key="KMM_Templates"):
+        if st.button("KMM Templates", on_click=KMM_templates, key="KMM_Templates",disabled=True):
             KMM_templates()
 
     # Chat input and message display
@@ -174,21 +183,19 @@ def main():
         )
 
     # User input prompt at the end
-    with st.form(key='my_form'):
-        st.write("Enter your query:")       
-        user_query = st.text_input("", key="user_query")        
-        st.form_submit_button(label='Submit')
-        st.empty()
-        if user_query:
-            st.session_state.messages.append({"role": "user", "content": user_query})
-            response = user_input(user_query)
-            if response is not None:
-                if isinstance(response['output_text'], list):
-                    for response_item in response['output_text']:
-                        st.session_state.messages.append({"role": "assistant", "content": response_item})
-                 
-                else:
-                    st.session_state.messages.append({"role": "assistant", "content": response["output_text"]})
+    user_query = st.chat_input("Enter your query")
+
+    if user_query:
+        st.session_state.messages.append({"role": "user", "content": user_query})
+    
+        response = user_input(user_query)
+        if response is not None:
+            if isinstance(response['output_text'], list):
+                for response_item in response['output_text']:
+                    st.session_state.messages.append({"role": "assistant", "content": response_item})
+                
+            else:
+                st.session_state.messages.append({"role": "assistant", "content": response["output_text"]})
                     
 if __name__ == "__main__":
     main()
