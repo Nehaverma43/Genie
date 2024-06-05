@@ -1,3 +1,4 @@
+import logging
 import os
 from PyPDF2 import PdfReader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -8,12 +9,13 @@ from langchain.vectorstores import FAISS
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.chains.question_answering import load_qa_chain
 from langchain.prompts import PromptTemplate
+from langchain.chains.summarize import load_summarize_chain
 from dotenv import load_dotenv
-
+logger = logging.getLogger(__name__)
 load_dotenv()
 google_api_key = "AIzaSyDU7L29UsHIHGhoIICcHYtTvDIQZ4pl5lU"
 google_genai_model = "gemini-pro"
-pdf_folder_path = r"Pdfs"
+pdf_folder_path = r"D:\Chatbot\Pdfs"
 
 def get_pdf_text(pdf_docs):
     text = ""
@@ -46,12 +48,12 @@ def get_conversational_chain(google_api_key=google_api_key):
     """
     )
 
+    
+
     model = ChatGoogleGenerativeAI(model=google_genai_model,
                                    client=genai,
                                    temperature=0.3,
                                    google_api_key=google_api_key,)
-    prompt = PromptTemplate(template=prompt_template,
-                            input_variables=["context", "question"])
     chain = load_summarize_chain(
     llm=model, 
     chain_type="map_reduce", 
@@ -83,9 +85,12 @@ def user_input(user_question):
     chain = get_conversational_chain()
 
     response = chain(
-        {"input_documents": docs, "question": user_question}, return_only_outputs=True,request_options={"timeout": 1000},  )
+        {"input_documents": docs, "question": user_question}, return_only_outputs=True,request_options={"timeout": 1000}, )
 
     return response
+
+
+
 def clear_text():
     st.session_state.my_text = st.session_state.widget
     st.session_state.widget = ""
@@ -101,6 +106,8 @@ def main():
         pdf_files = [os.path.join(pdf_folder_path, f) for f in os.listdir(pdf_folder_path) if f.endswith('.pdf')]
         raw_text = get_pdf_text(pdf_files)
         text_chunks = get_text_chunks(raw_text)
+        #st.markdown(f"Len chunks: {len(text_chunks)}")
+        #print (len(text_chunks))
         get_vector_store(text_chunks)
        #st.success("PDF files processed successfully")
     else:
@@ -111,13 +118,13 @@ def main():
         st.write(' ')
 
     with col2:
-        st.image(r"Intro.png",width=300)
+        st.image(r"D:\Chatbot\Intro.png",width=300)
 
     with col3:
         st.write(' ')
 
     # Main content area for displaying chat messages
-    #st.image(r"Intro.png",width=300)
+    #st.image(r"D:\Chatbot\Intro.png",width=300)
     st.markdown('<div style="background-color:#FFA500;padding:10px;border-radius:10px;">'
             '<h2 style="color:#214761;text-align:center;font-size:20px;">Hi there! I am MSC Genie. I am a GenAI Bot that will be answering your queries. Currently, the following repositories are covered.</h2>'
             '</div>', unsafe_allow_html=True)
@@ -128,7 +135,7 @@ def main():
     col1, col2, col3 = st.columns(3)  
 
     with col1:
-        if st.button('MSC Publications', on_click=MSC_publications, key="MSC_Publications",disabled=True):
+        if st.button('MSC Publications', on_click=MSC_publications, key="MSC_Publications", disabled=True):
             MSC_publications()
 
     with col2:
@@ -136,7 +143,7 @@ def main():
             HR_Policies()
             
     with col3:
-        if st.button("KMM Templates", on_click=KMM_templates, key="KMM_Templates",disabled=True):
+        if st.button("KMM Templates", on_click=KMM_templates, key="KMM_Templates", disabled=True):
             KMM_templates()
 
     # Chat input and message display
@@ -153,27 +160,10 @@ def main():
            unsafe_allow_html=True
        )
         elif message["role"] == "assistant":
-            col1, col2, col3,col4,col5,col6,col7,col8 = st.columns(8)
-
-            with col1:
-                st.write(' ')
-
-            with col2:
-                st.write(' ')
-            with col3:
-                st.write(' ')
-            with col4:
-                st.write(' ')
-            with col5:
-                st.write(' ')
-            with col6:
-                st.write(' ')
-            with col7:
-                st.write(' ')
-
-            with col8:
-                st.image(r"Found.png", width=75)
-            #st.image("D:\Chatbot\Found.png", width=50)
+            cols = st.columns(8)
+            with cols[7]: 
+                st.image("Found.png", width=75)            
+            
             st.markdown(
             f'<div class="message-container" style="display: flex; justify-content: flex-end;">'
             f'<div class="st-emotion-cache-4oy321" style="background-color: #C4E4F7; padding: 10px; border-radius: 10px; text-align: right;">{message["content"]}</div>'
