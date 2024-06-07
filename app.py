@@ -36,6 +36,7 @@ def get_text_chunks(text):
 
 def get_vector_store(chunks):
     retries = 3
+    backoff_factor = 2
     for attempt in range(retries):
         try:
             embeddings = GoogleGenerativeAIEmbeddings(
@@ -44,10 +45,11 @@ def get_vector_store(chunks):
             vector_store.save_local("faiss_index")
             break
         except DeadlineExceeded:
-            logger.error(f"Embedding request timed out. Attempt {attempt + 1} of {retries}.")
-            st.error(f"Embedding request timed out. Attempt {attempt + 1} of {retries}. Retrying...")
+            wait_time = backoff_factor ** attempt
+            logger.error(f"Embedding request timed out. Attempt {attempt + 1} of {retries}. Retrying in {wait_time} seconds...")
+            st.error(f"Embedding request timed out. Attempt {attempt + 1} of {retries}. Retrying in {wait_time} seconds...")
             if attempt < retries - 1:
-                time.sleep(2)  # wait for 2 seconds before retrying
+                time.sleep(wait_time)
             else:
                 st.error("Failed to embed text after several attempts. Please try again later.")
                 return None
@@ -100,6 +102,7 @@ def user_input(user_question):
     chain = get_conversational_chain()
 
     retries = 3
+    backoff_factor = 2
     for attempt in range(retries):
         try:
             response = chain(
@@ -109,10 +112,11 @@ def user_input(user_question):
             )
             return response
         except DeadlineExceeded:
-            logger.error(f"Request to Google Generative AI timed out. Attempt {attempt + 1} of {retries}.")
-            st.error(f"Request to Google Generative AI timed out. Attempt {attempt + 1} of {retries}. Retrying...")
+            wait_time = backoff_factor ** attempt
+            logger.error(f"Request to Google Generative AI timed out. Attempt {attempt + 1} of {retries}. Retrying in {wait_time} seconds...")
+            st.error(f"Request to Google Generative AI timed out. Attempt {attempt + 1} of {retries}. Retrying in {wait_time} seconds...")
             if attempt < retries - 1:
-                time.sleep(2)  # wait for 2 seconds before retrying
+                time.sleep(wait_time)
             else:
                 st.error("Failed to get a response after several attempts. Please try again later.")
                 return None
