@@ -12,6 +12,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chains.summarize import load_summarize_chain
 from dotenv import load_dotenv
 from google.api_core.exceptions import DeadlineExceeded
+import time
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -29,19 +30,27 @@ def get_pdf_text(pdf_docs):
 
 def get_text_chunks(text):
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000, chunk_overlap=200)
+        chunk_size=10000, chunk_overlap=1000)
     chunks = splitter.split_text(text)
     return chunks
 
 def get_vector_store(chunks):
-    try:
-        embeddings = GoogleGenerativeAIEmbeddings(
-            model="models/embedding-001", google_api_key=google_api_key) 
-        vector_store = FAISS.from_texts(chunks, embedding=embeddings)
-        vector_store.save_local("faiss_index")
-    except DeadlineExceeded:
-        logger.error("Embedding request timed out. Please try again later.")
-        st.error("Embedding request timed out. Please try again later.")
+    retries = 3
+    for attempt in range(retries):
+        try:
+            embeddings = GoogleGenerativeAIEmbeddings(
+                model="models/embedding-001", google_api_key=google_api_key) 
+            vector_store = FAISS.from_texts(chunks, embedding=embeddings)
+            vector_store.save_local("faiss_index")
+            break
+        except DeadlineExceeded:
+            logger.error(f"Embedding request timed out. Attempt {attempt + 1} of {retries}.")
+            st.error(f"Embedding request timed out. Attempt {attempt + 1} of {retries}. Retrying...")
+            if attempt < retries - 1:
+                time.sleep(2)  # wait for 2 seconds before retrying
+            else:
+                st.error("Failed to embed text after several attempts. Please try again later.")
+                return None
 
 def get_conversational_chain(google_api_key=google_api_key):
     map_prompt = PromptTemplate.from_template(
@@ -90,18 +99,23 @@ def user_input(user_question):
 
     chain = get_conversational_chain()
 
-    try:
-        response = chain(
-            {"input_documents": docs, "question": user_question},
-            return_only_outputs=True,
-            request_options={"timeout": 1000},
-        )
-    except DeadlineExceeded:
-        logger.error("Request to Google Generative AI timed out.")
-        st.error("Request to Google Generative AI timed out. Please try again later.")
-        return None
-
-    return response
+    retries = 3
+    for attempt in range(retries):
+        try:
+            response = chain(
+                {"input_documents": docs, "question": user_question},
+                return_only_outputs=True,
+                request_options={"timeout": 1000},
+            )
+            return response
+        except DeadlineExceeded:
+            logger.error(f"Request to Google Generative AI timed out. Attempt {attempt + 1} of {retries}.")
+            st.error(f"Request to Google Generative AI timed out. Attempt {attempt + 1} of {retries}. Retrying...")
+            if attempt < retries - 1:
+                time.sleep(2)  # wait for 2 seconds before retrying
+            else:
+                st.error("Failed to get a response after several attempts. Please try again later.")
+                return None
 
 def clear_text():
     st.session_state.my_text = st.session_state.widget
